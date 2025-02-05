@@ -5,6 +5,8 @@
 
 int main(){
 
+    boost::asio::io_context ioc{};
+
     boost::system::error_code ec{};
     if (ec) {
         std::cerr << "Error: " << ec.message() << std::endl;
