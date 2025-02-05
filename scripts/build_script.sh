@@ -18,5 +18,8 @@ cmake "$PROJECT_ROOT" -GNinja -DCMAKE_BUILD_TYPE=Release
 # Build the project with Ninja
 ninja
 
+#Clear output before running app
+clear
+
 # Run the compiled binary if the build succeeds
 ./network-monitor
