@@ -33,3 +33,5 @@
 
 .DS_Store
 CMakeUserPresets.json
+.vscode
+conan_paths.json
