@@ -1,10 +1,18 @@
 #include <boost/asio.hpp>
 #include <boost/system/error_code.hpp>
+#include <boost/beast.hpp>
+#include <boost/beast/core.hpp>
+#include <boost/beast/websocket.hpp>
+#include <boost/beast/websocket/stream.hpp>
 
 #include <iomanip>
 #include <iostream>
 #include <thread>
+#include <string>
 
+namespace beast = boost::beast;
+namespace websocket = beast::websocket;
+namespace net = boost::asio;
 using tcp = boost::asio::ip::tcp;
 
 void Log(boost::system::error_code ec){
@@ -19,36 +27,47 @@ void OnConnect(boost::system::error_code ec){
 }
 
 int main(){
-    std::cerr << "[" << std::setw(14) << std::this_thread::get_id() << "] main"
-              << std::endl;
+    std::string url = "ltnm.learncppthroughprojects.com";
+    std::string port = "80";
+    std::string message = "Hello World!";
 
     boost::asio::io_context ioc{};
 
-    tcp::socket socket{boost::asio::make_strand(ioc)};
-
-    size_t nThreads{4};
-
     boost::system::error_code ec{};
     tcp::resolver resolver{ioc};
-    auto resolverIt{resolver.resolve("google.com", "80", ec)};
-    if (ec) {
+    auto resolverIt{resolver.resolve(url, port, ec)};
+
+    if(ec){
         Log(ec);
         return -1;
     }
-    for(size_t idx{0}; idx < nThreads; ++idx){
-        socket.async_connect(*resolverIt, OnConnect);
+
+    tcp::socket socket{ioc};
+    socket.connect(*resolverIt,  ec);
+
+    if(ec){
+        Log(ec);
+        return -2;
     }
 
-    std::vector<std::thread> threads {};
-    threads.reserve(nThreads);
-    for(size_t idx{0}; idx < nThreads; ++idx){
-        threads.emplace_back([&ioc]() {
-            ioc.run();
-        });
+    websocket::stream<boost::beast::tcp_stream> ws{std::move(socket)};
+    ws.handshake(url, "/echo", ec);
+
+    ws.text(true);
+    boost::asio::const_buffer wbuffer{message.c_str(), message.size()};
+    ws.write(wbuffer, ec);
+
+    boost::beast::flat_buffer rbuffer{};
+    ws.read(rbuffer, ec);
+
+    if(ec){
+        Log(ec);
+        return -3;
     }
-    for(size_t idx{0}; idx < nThreads; ++idx){
-        threads[idx].join();
-    }
+
+    std::cout << "Echo: "
+              << boost::beast::make_printable(rbuffer.data())
+              << std::endl;
 
     return 0;
 }
